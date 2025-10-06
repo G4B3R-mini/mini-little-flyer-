@@ -1,0 +1,76 @@
+#start {
+  /* Posicionamento fixo */
+  position: fixed;
+  bottom: 40px;
+  left: 80%;
+  /* transform: translateX(-50%);*/
+  z-index: 1000;
+
+  /* Layout e tamanho */
+  display: inline-block;
+  padding: 16px 48px;
+  min-width: 100px;
+
+  /* Tipografia */
+  font-size: 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+  /* Aparência */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 50px;
+  box-shadow:
+    0 8px 20px rgba(102, 126, 234, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.2);
+
+  /* Cursor e interação */
+  cursor: pointer;
+  outline: none;
+  transition: all 0.3s ease;
+
+  /* Otimização para touch */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Efeito hover (para testes em desktop) */
+#start:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow:
+    0 12px 28px rgba(102, 126, 234, 0.5),
+    0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Efeito ao pressionar */
+#start:active {
+  transform: translateX(-50%) translateY(1px) scale(0.98);
+  box-shadow:
+    0 4px 12px rgba(102, 126, 234, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Estado desabilitado (se necessário) */
+#start:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: translateX(-50%);
+}
+
+/* Animação de pulso (opcional) */
+@keyframes pulse {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.05);
+  }
+}
+
+#start.pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
