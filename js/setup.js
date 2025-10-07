@@ -4,8 +4,8 @@ import { Lobby } from "./screens/lobby.js";
 export default class Setup {
   constructor(
     system,
-    cacheLoadingCallback = lobby => {},
-    cacheLoadedCallback = () => {}
+    cacheLoadingCallback = () => {},
+    cacheLoadedCallback = lobby => {}
   ) {
     this.system = system;
 
@@ -17,9 +17,8 @@ export default class Setup {
     this.initializeScreens();
     setTimeout(() => {
       console.log("carregando dados...");
-      this.loadCache(cacheLoadedCallback);
-    }, 1000);
-    
+      this.loadCache();
+    }, 300);
   }
 
   initializeScreens() {
@@ -32,13 +31,14 @@ export default class Setup {
 
       this.loading = new Loading(loadingId, mainScreen);
       this.lobby = new Lobby(lobbyId, mainScreen);
+      console.log(this.lobby);
     } catch (error) {
       console.error("Erro ao inicializar telas:", error);
       throw error;
     }
   }
 
-  async loadCache(callbak = () => {}) {
+  async loadCache() {
     try {
       // Cria a tela de loading
       this.loading.create();
@@ -53,7 +53,8 @@ export default class Setup {
 
       await this.delay(remainingTime);
       await this.transitionToLobby();
-      if (callback) this.callback();
+      //  if (callback) this.callback();
+      if (this.cacheLoadedCallback) this.cacheLoadedCallback(this.lobby);
       this.isLoaded = true;
     } catch (error) {
       console.error("Erro durante o carregamento:", error);
@@ -64,7 +65,7 @@ export default class Setup {
   async executeCacheLoading() {
     try {
       // Se o callback retornar uma Promise, aguarda
-      const result = this.cacheLoadingCallback(this.lobby);
+      const result = this.cacheLoadingCallback();
       if (result instanceof Promise) {
         await result;
       }

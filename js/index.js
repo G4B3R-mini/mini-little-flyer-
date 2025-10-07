@@ -9,14 +9,14 @@ console.log("int");
 let cls_cache = null;
 const setup = new Setup(
   system,
-  lobby => {
+  () => {
     cls_cache = new CacheLoader();
     console.log("loading", cls_cache[fakeEquipad]);
 
-    lobby.addToScene(cls_cache[fakeEquipad].scene);
+    // lobby.addToScene(cls_cache[fakeEquipad].scene);
   },
-  () => {
-    console.log(cls_cache[fakeEquipad].scene);
-    //  this.lobby.addToScene(cls_cache[fakeEquipad].scene);
+  lobby => {
+    console.log(cls_cache.cache["cartoon"]);
+    lobby.addToScene(cls_cache.cache[fakeEquipad].scene);
   }
 );
