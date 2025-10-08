@@ -10,6 +10,10 @@
     <link rel="stylesheet" type="text/css" href="./css/lobby.css" />
   </head>
   <body>
+       <audio id="lobby-audio" loop>
+      <source src="./audio/Aviator_Lobby_Ambience.mp3" type="audio/mpeg" />
+      O seu navegador não suporta o elemento de áudio.
+    </audio>
     <script type="importmap">
       {
         "imports": {
@@ -21,5 +25,7 @@
     </script>
     <div id="screens"></div>
     <script type="module" src="./js/index.js"></script>
+    <script src="./js/Audio.js"></script>
+
   </body>
 </html>
