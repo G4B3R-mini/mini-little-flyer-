@@ -17,6 +17,8 @@ const setup = new Setup(
   },
   lobby => {
     console.log(cls_cache.cache["cartoon"]);
-    lobby.addToScene(cls_cache.cache[fakeEquipad].scene);
+    const airplane = cls_cache.cache[fakeEquipad].scene;
+    airplane.position.z = 3;
+    lobby.setAirplane(airplane);
   }
 );
