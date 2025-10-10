@@ -1,10 +1,11 @@
 export class Screen {
   constructor(nameId, father, tag = "div", styleDisplay = "block") {
+    //this.name = this.constructor.name;
     this.father = father;
     this.screen = document.createElement(tag);
     this.styleDisplay = styleDisplay;
     this.screen.id = nameId;
-    this.addStyle()
+    this.addStyle();
     // this.display("none");
   }
   addStyle() {

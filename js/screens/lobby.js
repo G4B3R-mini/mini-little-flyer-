@@ -2,10 +2,11 @@ import { Screen } from "./screen-02.js";
 import * as THREE from "three";
 
 export class Lobby extends Screen {
-  constructor(nameId, father, tag = "div", styleDisplay = "block") {
-    super(nameId, father, tag, styleDisplay);
+  constructor( father, track, tag = "div", styleDisplay = "block") {
+    super("lobby", father, tag, styleDisplay);
 
     // Propriedades da classe
+    this.track = track;
     this.animCallback = null;
     this.scene = null;
     this.camera = null;
@@ -116,26 +117,28 @@ export class Lobby extends Screen {
     this.stars.push(starField);
 
     // Criar pista/plataforma
-    const runwayGeometry = new THREE.BoxGeometry(3, 0.2, 20);
-    const runwayMaterial = new THREE.MeshStandardMaterial({
-      color: 0x404040,
-      roughness: 0.8
-    });
-    const runway = new THREE.Mesh(runwayGeometry, runwayMaterial);
-    runway.position.set(0, -2, -5);
-    runway.receiveShadow = true;
-    this.scene.add(runway);
+    // const runwayGeometry = new THREE.BoxGeometry(3, 0.2, 20);
+    // const runwayMaterial = new THREE.MeshStandardMaterial({
+    //   color: 0x404040,
+    //   roughness: 0.8
+    // });
+    // const runway = new THREE.Mesh(runwayGeometry, runwayMaterial);
+    // runway.position.set(0, -2, -5);
+    // runway.receiveShadow = true;
+    // this.scene.add(runway);
 
-    // Linhas da pista
-    for (let i = 0; i < 8; i++) {
-      const lineGeometry = new THREE.BoxGeometry(0.3, 0.21, 1.5);
-      const lineMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffff00
-      });
-      const line = new THREE.Mesh(lineGeometry, lineMaterial);
-      line.position.set(0, -1.9, -10 + i * 2.5);
-      this.scene.add(line);
-    }
+    // // Linhas da pista
+    // for (let i = 0; i < 8; i++) {
+    //   const lineGeometry = new THREE.BoxGeometry(0.3, 0.21, 1.5);
+    //   const lineMaterial = new THREE.MeshStandardMaterial({
+    //     color: 0xffff00
+    //   });
+    //   const line = new THREE.Mesh(lineGeometry, lineMaterial);
+    //   line.position.set(0, -1.9, -10 + i * 2.5);
+    //   this.scene.add(line);
+    // }
+
+    this.scene.add(this.track.scene);
   }
 
   __createCloud() {
@@ -513,5 +516,8 @@ export class Lobby extends Screen {
     this.removeFromScene(this.airplane);
     this.addToScene(object);
     this.airplane = object;
+  }
+  setStartGame(callback){
+   this.startGame= callback
   }
 }

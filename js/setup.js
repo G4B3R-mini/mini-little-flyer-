@@ -1,5 +1,5 @@
-import { Loading } from "./screens/loading.js";
-import { Lobby } from "./screens/lobby.js";
+import { Loading, Lobby, Game } from "./screens/main.js";
+import { Track } from "airport/Track.js";
 
 export default class Setup {
   constructor(
@@ -8,7 +8,7 @@ export default class Setup {
     cacheLoadedCallback = lobby => {}
   ) {
     this.system = system;
-
+    this.airport = { track: new Track() };
     this.cacheLoadedCallback = cacheLoadedCallback;
     this.cacheLoadingCallback = cacheLoadingCallback;
     this.minLoadingTime = 2000;
@@ -23,15 +23,18 @@ export default class Setup {
 
   initializeScreens() {
     try {
-      const [mainScreen, loadingId, lobbyId] = this.system.screens;
+      const mainScreen = this.system.conteiner;
 
-      if (!mainScreen || !loadingId || !lobbyId) {
+      if (!mainScreen) {
         throw new Error("Sistema de telas não configurado corretamente");
       }
 
-      this.loading = new Loading(loadingId, mainScreen);
-      this.lobby = new Lobby(lobbyId, mainScreen);
-      console.log(this.lobby);
+      this.loading = new Loading(mainScreen);
+      this.lobby = new Lobby(mainScreen, this.airport.track);
+      this.newGame = new Game(mainScreen, this.airport.track);
+      this.lobby.setStartGame(() => {
+        this.transitionToGame();
+      });
     } catch (error) {
       console.error("Erro ao inicializar telas:", error);
       throw error;
@@ -40,8 +43,10 @@ export default class Setup {
 
   async loadCache() {
     try {
-      // Cria a tela de loading
       this.loading.create();
+
+      // dá um frame pro browser renderizar o loader antes de bloquear
+      await new Promise(requestAnimationFrame);
 
       // Executa o callback de carregamento
       const startTime = performance.now();
@@ -86,12 +91,25 @@ export default class Setup {
     this.loading.destroy();
   }
 
+  async transitionToGame() {
+    // Cria o lobby antes de destruir o loading para transição suave
+    this.newGame.create();
+
+    // Pequeno delay para garantir que o lobby seja renderizado
+    await this.delay(100);
+
+    // Remove o loading
+    this.lobby.destroy();
+  }
+
   handleLoadError(error) {
     // Remove o loading em caso de erro
     if (this.loading) {
       this.loading.destroy();
     }
-
+    if (this.newGame) {
+      this.newGame.destroy();
+    }
     // Aqui você pode mostrar uma tela de erro ou tentar novamente
     console.error(
       "Falha no carregamento. Verifique a conexão e tente novamente."
@@ -100,7 +118,6 @@ export default class Setup {
     // Opcional: criar uma tela de erro personalizada
     // this.showErrorScreen(error);
   }
-
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

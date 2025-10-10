@@ -1,5 +1,7 @@
 export class Screen {
   constructor(nameId, father, tag = "div", styleDisplay = "block") {
+    this.name = this.constructor.name;
+
     this.father = father;
     this.nameId = nameId;
     this.screen = document.createElement(tag);

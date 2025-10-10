@@ -1,10 +1,15 @@
-
 #loading {
   width: 100vw;
   height: 100vh;
 }
 /* HTML: <div class="loader"></div> */
+.loader,
+.loader::after {
+  will-change: transform, left, background-position;
+  transform: translateZ(0);
+}
 .loader {
+  will-change: transform;
   width: fit-content;
   font-size: 35px;
   font-family: monospace;

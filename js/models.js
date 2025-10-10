@@ -9,7 +9,7 @@ export const loaders = {
 
 export const models = [
   {
-    cartoon: "../cartoon_plane.glb",
+    cartoon: "../models/cartoon_plane.glb",
     type: loaders.glb.name,
     name: "cartoon"
   }
