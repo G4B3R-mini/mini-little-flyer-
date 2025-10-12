@@ -1,8 +1,9 @@
 // Importa a classe base
 import { Screen } from "./screen-02.js";
+import * as THREE from "three";
 
 export class Game extends Screen {
-    constructor(nameId, father, track, tag = "div", styleDisplay = "block") {
+  constructor(father, track, tag = "div", styleDisplay = "block") {
     super("game", father, tag, styleDisplay);
 
     // Propriedades da classe
@@ -15,7 +16,12 @@ export class Game extends Screen {
     this.clouds = [];
     this.stars = [];
     this.time = 0;
-    }
+    this.__init();
+  }
+  __init() {
+    this.__addCanvas();
+    this.__createEnvironment();
+  }
   __addCanvas() {
     // Configuração da cena com céu azul
     this.scene = new THREE.Scene();
@@ -60,5 +66,27 @@ export class Game extends Screen {
 
     // Inicia o loop de animação
     this.__startAnimation();
+  }
+  __startAnimation() {
+    const animate = () => {
+      this.time += 0.016;
+
+      // Movimento sutil da câmera
+      this.camera.position.y = 2 + Math.sin(this.time * 0.5) * 0.3;
+      this.camera.lookAt(0, 0, 0);
+
+      // Executa callback customizado se existir
+      if (this.animCallback) {
+        this.animCallback();
+      }
+
+      // Renderiza a cena
+      this.renderer.render(this.scene, this.camera);
+    };
+
+    this.renderer.setAnimationLoop(animate);
+  }
+  __createEnvironment() {
+    this.scene.add(this.track.scene);
   }
 }
