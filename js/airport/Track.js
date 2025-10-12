@@ -1,7 +1,13 @@
 import * as THREE from "three";
+import { Base } from "js/core/base.js";
 
-export class Track {
+export class Track extends Base {
   constructor() {
+    super();
+    this.__init();
+  }
+  __init() {
+    this.log("Track");
     this.scene = new THREE.Group();
     // Criar pista/plataforma
     const runwayGeometry = new THREE.BoxGeometry(3, 0.2, 20);
@@ -23,11 +29,16 @@ export class Track {
       this.scene.add(line);
     }
   }
+  setScene(scene) {
+    this.scene = scene;
+    return this;
+  }
   getScene() {
     this.scene;
   }
   clone() {
-    return TrackClone(this.scene.clone());
+    // return new Track().setScene(this.scene.clone());
+    return new TrackClone(this.scene.clone());
   }
 }
 
@@ -35,5 +46,8 @@ export class TrackClone extends Track {
   constructor(scene) {
     super();
     this.scene = scene;
+  }
+  __init() {
+    this.log("clone");
   }
 }

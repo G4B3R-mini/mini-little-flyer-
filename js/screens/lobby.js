@@ -2,7 +2,7 @@ import { Screen } from "./screen-02.js";
 import * as THREE from "three";
 
 export class Lobby extends Screen {
-  constructor( father, track, tag = "div", styleDisplay = "block") {
+  constructor(father, track, tag = "div", styleDisplay = "block") {
     super("lobby", father, tag, styleDisplay);
 
     // Propriedades da classe
@@ -441,7 +441,7 @@ export class Lobby extends Screen {
     uiContainer.appendChild(playerInfo);
 
     this.getElement().appendChild(uiContainer);
-
+    this.setButton(btnStart);
     return btnStart;
   }
 
@@ -517,7 +517,7 @@ export class Lobby extends Screen {
     this.addToScene(object);
     this.airplane = object;
   }
-  setStartGame(callback){
-   this.startGame= callback
+  setStartGame(callback) {
+    this.startGame = callback;
   }
 }

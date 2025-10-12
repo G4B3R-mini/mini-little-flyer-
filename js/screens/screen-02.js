@@ -4,6 +4,7 @@ export class Screen {
 
     this.father = father;
     this.nameId = nameId;
+    this.button = null;
     this.screen = document.createElement(tag);
     this.styleDisplay = styleDisplay;
     this.screen.id = nameId;
@@ -89,5 +90,13 @@ export class Screen {
   // Getter para o elemento DOM
   getElement() {
     return this.screen;
+  }
+  setButton(element) {
+    if (element) this.button = element;
+  }
+  onClick(onClick = () => {}) {
+    if (this.button) this.button.addEventListener("click", () => {
+     onClick()
+    });
   }
 }

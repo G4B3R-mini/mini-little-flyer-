@@ -10,24 +10,34 @@
     <link rel="stylesheet" type="text/css" href="./css/lobby.css" />
   </head>
   <body>
-       <audio id="lobby-audio" loop>
+    <audio id="lobby-audio" loop>
       <source src="./audio/Aviator_Lobby_Ambience.mp3" type="audio/mpeg" />
       O seu navegador não suporta o elemento de áudio.
     </audio>
+    <!--     <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@v0.153.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.153.0/examples/jsm/",
+      "modules/": "./js/modules/",
+       "airport/": "./js/airport/"
+       
+    }
+  }
+</script> -->
     <script type="importmap">
       {
         "imports": {
-          "three": "https://cdn.jsdelivr.net/npm/three@v0.153.0/build/three.module.js",
-          "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.153.0/examples/jsm/",
+          "three": "./js/modules/r153/build/three.module.js",
+          "three/addons/": "./js/modules/r153/examples/jsm/",
           "modules/": "./js/modules/",
-           "airport/": "./js/airport/"
-           
+          "airport/": "./js/airport/",
+           "js/": "./js/"
         }
       }
     </script>
     <div id="screens"></div>
     <script type="module" src="./js/index.js"></script>
     <script src="./js/Audio.js"></script>
-
   </body>
 </html>
