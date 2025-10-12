@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-export  class Track {
+export class Track {
   constructor() {
     this.scene = new THREE.Group();
     // Criar pista/plataforma
@@ -25,5 +25,15 @@ export  class Track {
   }
   getScene() {
     this.scene;
+  }
+  clone() {
+    return TrackClone(this.scene.clone());
+  }
+}
+
+export class TrackClone extends Track {
+  constructor(scene) {
+    super();
+    this.scene = scene;
   }
 }
