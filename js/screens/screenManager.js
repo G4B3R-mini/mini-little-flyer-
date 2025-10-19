@@ -7,10 +7,10 @@ export class ScreenManager {
     this.screens[screen.name] = screen;
     return this;
   }
-  nextScreen(name, getScreen = screen => {}) {
+  nextScreen(name, settings, getScreen = screen => {}) {
     if (!this.existis(name)) return this;
     if (this.screen) this.screen.destroy();
-    this.screen = this.screens[name].create();
+    this.screen = this.screens[name].create(settings);
 
     getScreen(this.screen);
     return this;

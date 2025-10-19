@@ -1,7 +1,7 @@
-import { Screen } from "./screen-02.js";
+import { ScreenThreejs } from "./screen_fron_trheejs.js";
 import * as THREE from "three";
 
-export class Lobby extends Screen {
+export class Lobby extends ScreenThreejs {
   constructor(father, track, tag = "div", styleDisplay = "block") {
     super("lobby", father, tag, styleDisplay);
 
@@ -26,6 +26,7 @@ export class Lobby extends Screen {
     this.__createAirplane();
     this.__addControls();
     this.__setupResizeHandler();
+  //  console.log(this.renderer.info.render, this.renderer.info.memory);
   }
 
   __addCanvas() {
@@ -297,32 +298,10 @@ export class Lobby extends Screen {
       // Movimento sutil da câmera
       this.camera.position.y = 2 + Math.sin(this.time * 0.5) * 0.3;
       this.camera.lookAt(0, 0, 0);
-
-      // Executa callback customizado se existir
-      if (this.animCallback) {
-        this.animCallback();
-      }
-
-      // Renderiza a cena
-      this.renderer.render(this.scene, this.camera);
     };
+    super.__startAnimation(animate);
 
-    this.renderer.setAnimationLoop(animate);
-  }
-
-  __setupResizeHandler() {
-    const handleResize = () => {
-      if (!this.camera || !this.renderer) return;
-
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    };
-
-    window.addEventListener("resize", handleResize);
-    this._resizeHandler = handleResize;
+    // Renderiza a cena
   }
 
   __addControls() {
@@ -454,69 +433,6 @@ export class Lobby extends Screen {
     this.animCallback = callback;
   }
 
-  getScene() {
-    return this.scene;
-  }
-
-  getCamera() {
-    return this.camera;
-  }
-
-  getRenderer() {
-    return this.renderer;
-  }
-
-  addToScene(object) {
-    if (this.scene && object instanceof THREE.Object3D) {
-      this.scene.add(object);
-    }
-  }
-
-  removeFromScene(object) {
-    if (this.scene && object instanceof THREE.Object3D) {
-      this.scene.remove(object);
-    }
-  }
-
-  dispose() {
-    if (this.renderer) {
-      this.renderer.setAnimationLoop(null);
-    }
-
-    if (this._resizeHandler) {
-      window.removeEventListener("resize", this._resizeHandler);
-    }
-
-    if (this.renderer) {
-      this.renderer.dispose();
-    }
-
-    if (this.scene) {
-      this.scene.traverse(object => {
-        if (object.geometry) object.geometry.dispose();
-        if (object.material) {
-          if (Array.isArray(object.material)) {
-            object.material.forEach(material => material.dispose());
-          } else {
-            object.material.dispose();
-          }
-        }
-      });
-    }
-
-    this.scene = null;
-    this.camera = null;
-    this.renderer = null;
-    this.animCallback = null;
-    this.airplane = null;
-    this.clouds = [];
-    this.stars = [];
-  }
-  setAirplane(object) {
-    this.removeFromScene(this.airplane);
-    this.addToScene(object);
-    this.airplane = object;
-  }
   setStartGame(callback) {
     this.startGame = callback;
   }

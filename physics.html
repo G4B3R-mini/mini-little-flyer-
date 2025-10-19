@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js + Ammo.js</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.module.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      // ==========================================================
+      // 🔹 1. Carrega Ammo.js (engine de física em WebAssembly)
+      // ==========================================================
+      const AmmoLib = await new Promise(resolve => {
+        const script = document.createElement("script");
+        // Usa o build WASM do Ammo.js do pacote do Three.js
+        script.src =
+          "./js/modules/r153/examples/jsm/libs/ammo.wasm.js";
+
+        // Quando o script terminar de carregar, chama Ammo() e resolve a Promise
+        script.onload = () => Ammo().then(resolve);
+        document.body.appendChild(script);
+      });
+
+      // ==========================================================
+      // 🔹 2. Configuração básica do Three.js (renderização 3D)
+      // ==========================================================
+      const scene = new THREE.Scene(); // cena onde tudo é desenhado
+
+      const camera = new THREE.PerspectiveCamera(
+        75,                                // campo de visão (em graus)
+        window.innerWidth / window.innerHeight, // proporção da tela
+        0.1,                               // plano de corte próximo
+        1000                               // plano de corte distante
+      );
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement); // adiciona o <canvas> ao HTML
+
+      // Luz direcional simples
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(10, 10, 10);
+      scene.add(light);
+
+      // ==========================================================
+      // 🔹 3. Cria o mundo físico do Ammo.js
+      // ==========================================================
+      const collisionConfig = new AmmoLib.btDefaultCollisionConfiguration(); // define como colisões são tratadas
+      const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfig); // gerencia eventos de colisão
+      const broadphase = new AmmoLib.btDbvtBroadphase();                     // otimiza detecção de colisões
+      const solver = new AmmoLib.btSequentialImpulseConstraintSolver();      // resolve as forças e colisões
+
+      // O mundo físico: une tudo acima
+      const physicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
+        dispatcher,
+        broadphase,
+        solver,
+        collisionConfig
+      );
+
+      // Define a gravidade (em m/s² no eixo Y negativo)
+      physicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
+
+      // Lista de corpos móveis (para atualizar posições)
+      const rigidBodies = [];
+      const tmpTrans = new AmmoLib.btTransform(); // usado pra ler posições físicas
+
+      // ==========================================================
+      // 🔹 4. Função auxiliar para criar corpo físico (rigid body)
+      // ==========================================================
+      function createRigidBody(mesh, shape, mass = 0) {
+        // Transformação inicial (posição e rotação)
+        const transform = new AmmoLib.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(
+          new AmmoLib.btVector3(
+            mesh.position.x,
+            mesh.position.y,
+            mesh.position.z
+          )
+        );
+
+        // Motion state conecta o mundo físico com o gráfico (Three.js)
+        const motionState = new AmmoLib.btDefaultMotionState(transform);
+
+        // Inércia local (necessária para objetos com massa)
+        const localInertia = new AmmoLib.btVector3(0, 0, 0);
+        if (mass > 0) shape.calculateLocalInertia(mass, localInertia);
+
+        // Junta tudo: massa, forma, inércia, movimento
+        const rbInfo = new AmmoLib.btRigidBodyConstructionInfo(
+          mass,
+          motionState,
+          shape,
+          localInertia
+        );
+
+        // Cria o corpo físico
+        const body = new AmmoLib.btRigidBody(rbInfo);
+
+        // Adiciona ao mundo físico
+        physicsWorld.addRigidBody(body);
+
+        // Se tiver massa, guardamos para atualizar depois
+        if (mass > 0) rigidBodies.push({ mesh, body });
+
+        return body;
+      }
+
+      // ==========================================================
+      // 🔹 5. Cria o chão (fixo, massa = 0)
+      // ==========================================================
+      const groundGeo = new THREE.BoxGeometry(10, 1, 10);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+      const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+      groundMesh.position.set(0, -0.5, 0);
+      scene.add(groundMesh);
+
+      // O shape físico tem metade das dimensões do mesh
+      const groundShape = new AmmoLib.btBoxShape(
+        new AmmoLib.btVector3(5, 0.5, 5)
+      );
+      createRigidBody(groundMesh, groundShape, 0); // massa 0 = imóvel
+
+      // ==========================================================
+      // 🔹 6. Cria o cubo (dinâmico, massa > 0)
+      // ==========================================================
+      const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
+      const cubeMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+      const cubeMesh = new THREE.Mesh(cubeGeo, cubeMat);
+      cubeMesh.position.set(0, 5, 0); // começa acima do chão
+      scene.add(cubeMesh);
+
+      const cubeShape = new AmmoLib.btBoxShape(
+        new AmmoLib.btVector3(0.5, 0.5, 0.5)
+      );
+      createRigidBody(cubeMesh, cubeShape, 1); // massa 1 = cai com gravidade
+
+      // ==========================================================
+      // 🔹 7. Configura câmera e relógio
+      // ==========================================================
+      camera.position.set(5, 3, 8);
+      camera.lookAt(0, 0, 0);
+      const clock = new THREE.Clock(); // mede tempo entre frames
+
+      // ==========================================================
+      // 🔹 8. Loop principal (animação e atualização física)
+      // ==========================================================
+      function animate() {
+        // Tempo entre frames (deltaTime)
+        const delta = clock.getDelta();
+
+        // Avança a simulação física
+        // 10 = máx. subpassos (maior precisão)
+        physicsWorld.stepSimulation(delta, 10);
+
+        // Atualiza posição e rotação dos objetos dinâmicos
+        for (const { mesh, body } of rigidBodies) {
+          const motionState = body.getMotionState();
+          if (motionState) {
+            motionState.getWorldTransform(tmpTrans); // pega transformação física
+            const origin = tmpTrans.getOrigin();
+            const rot = tmpTrans.getRotation();
+
+            // Aplica ao objeto Three.js
+            mesh.position.set(origin.x(), origin.y(), origin.z());
+            mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
+          }
+        }
+
+        // Renderiza a cena na tela
+        renderer.render(scene, camera);
+
+        // Chama novamente no próximo frame
+        requestAnimationFrame(animate);
+      }
+
+      animate(); // inicia o loop
+    </script>
+  </body>
+</html>

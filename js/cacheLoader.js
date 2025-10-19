@@ -11,7 +11,7 @@ export default class CacheLoader {
       if (model.name == fakeEquipad) {
         console.log(loaders[model.type]);
         new loaders[model.type].cls(model[fakeEquipad], (glft)=>{
-         console.log(glft)
+         console.log(model.name)
          this.cache[fakeEquipad] = glft
         });
       }

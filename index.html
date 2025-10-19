@@ -10,6 +10,7 @@
     <link rel="stylesheet" type="text/css" href="./css/lobby.css" />
   </head>
   <body>
+
     <audio id="lobby-audio" loop>
       <source src="./audio/Aviator_Lobby_Ambience.mp3" type="audio/mpeg" />
       O seu navegador não suporta o elemento de áudio.
@@ -32,12 +33,24 @@
           "three/addons/": "./js/modules/r153/examples/jsm/",
           "modules/": "./js/modules/",
           "airport/": "./js/airport/",
-           "js/": "./js/"
+          "js/": "./js/"
         }
       }
     </script>
+    <div
+      id="joy"
+      style="
+        display: none;
+        width: 200px;
+        height: 200px;
+        bottom: 40px;
+        margin-bottom: 20px;
+        position: fixed;
+      "
+    ></div>
+
     <div id="screens"></div>
     <script type="module" src="./js/index.js"></script>
-    <script src="./js/Audio.js"></script>
+    <!--  <script src="./js/Audio.js"></script> -->
   </body>
 </html>

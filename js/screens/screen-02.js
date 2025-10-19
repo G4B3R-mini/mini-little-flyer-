@@ -42,7 +42,7 @@ export class Screen {
     return this;
   }
 
-  create() {
+  create(settings = {}) {
     const fatherElement = document.getElementById(this.father);
     if (!fatherElement) {
       console.error(`Elemento pai "${this.father}" não encontrado`);
@@ -95,8 +95,9 @@ export class Screen {
     if (element) this.button = element;
   }
   onClick(onClick = () => {}) {
-    if (this.button) this.button.addEventListener("click", () => {
-     onClick()
-    });
+    if (this.button)
+      this.button.addEventListener("click", () => {
+        onClick();
+      });
   }
 }

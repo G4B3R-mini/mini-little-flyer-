@@ -1,0 +1,6 @@
+class GameCore {
+ constructor(){
+  
+ }
+ 
+}

@@ -7,7 +7,19 @@ export class Loading extends Screen {
     this.__addLoader();
     this.__addStyles();
   }
+  __delay(settings) {
+    const delay = settings.delay;
+    if (!delay) return;
 
+    setTimeout(() => {
+      this.destroy();
+    }, delay + 500);
+  }
+  create(settings = {}) {
+    super.create({});
+      this.__delay(settings);
+    return this;
+  }
   __addLoader() {
     const container = document.createElement("div");
     container.style.position = "absolute";
@@ -20,7 +32,7 @@ export class Loading extends Screen {
 
     container.appendChild(spinner);
     this.screen.appendChild(container);
-}
+  }
 
   __addStyles() {
     this.screen.style.display = "flex";

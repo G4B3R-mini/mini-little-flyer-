@@ -4,15 +4,87 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Document</title>
+    <title>mini little flyer</title>
     <link rel="stylesheet" type="text/css" href="./css/loading.css" />
+    <link rel="stylesheet" type="text/css" href="./css/style.css" />
+    <link rel="stylesheet" type="text/css" href="./css/lobby.css" />
   </head>
   <body>
-    <script type="module">
-      import { Loading } from "./js/screens/loading.js";
-      const load = new Loading("loading", "screens");
-      load.create();
+    <audio id="lobby-audio" loop>
+      <source src="./audio/Aviator_Lobby_Ambience.mp3" type="audio/mpeg" />
+      O seu navegador não suporta o elemento de áudio.
+    </audio>
+    <!--     <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@v0.153.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.153.0/examples/jsm/",
+      "modules/": "./js/modules/",
+       "airport/": "./js/airport/"
+       
+    }
+  }
+</script> -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./js/modules/r153/build/three.module.js",
+          "three/addons/": "./js/modules/r153/examples/jsm/",
+          "modules/": "./js/modules/",
+          "airport/": "./js/airport/",
+          "js/": "./js/"
+        }
+      }
     </script>
+    <div
+      id="joy"
+      style="
+        display: none;
+        width: 200px;
+        height: 200px;
+        bottom: 40px;
+        margin-bottom: 20px;
+        position: fixed;
+      "
+    ></div>
+
     <div id="screens"></div>
+    <script type="module" src="./js/teste.js"></script>
+    <script type="module">
+      import * as THREE from "three";
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setAnimationLoop(animate);
+      document.body.appendChild(renderer.domElement);
+
+      // Exemplo com cor sólida
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+        transparent: true,
+        opacity: 0.02
+      });
+      const cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+
+      camera.position.z = 5;
+
+      function animate() {
+        //  cube.rotation.x += 0.01;
+        //    cube.rotation.y += 0.01;
+
+        renderer.render(scene, camera);
+      }
+    </script>
+    <!--  <script src="./js/Audio.js"></script> -->
   </body>
 </html>
