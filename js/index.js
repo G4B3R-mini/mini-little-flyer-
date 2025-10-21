@@ -3,6 +3,11 @@ import CacheLoader from "./cacheLoader.js";
 import { fakeEquipad } from "./models.js";
 import Phisic from "./core/physical-core.js";
 
+const libs = {
+  phisic: 
+  Phisic.create()
+};
+
 const system = {
   conteiner: "screens"
 };

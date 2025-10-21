@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>threejs</title>
+  </head>
+  <style>
+    body {
+      margin: 0;
+    }
+  </style>
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.module.js"
+        }
+      }
+    </script>
+    <script type="module">
+      // parte 1: Configuração Essencial
+      // Importa a biblioteca completa do Three.js para que possamos usá-la no nosso código.
+      import * as THREE from "three";
+      import Physic from "../js/core/physical-core.js";
+
+      const physic = await Physic.create(); // ==========================================================
+      // 🔹 2. Configuração básica do Three.js (renderização 3D)
+      // ==========================================================
+      const scene = new THREE.Scene(); // cena onde tudo é desenhado
+
+      const camera = new THREE.PerspectiveCamera(
+        75, // campo de visão (em graus)
+        window.innerWidth / window.innerHeight, // proporção da tela
+        0.1, // plano de corte próximo
+        1000 // plano de corte distante
+      );
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement); // adiciona o <canvas> ao HTML
+
+      // Luz direcional simples
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(10, 10, 10);
+      scene.add(light);
+      // ======== Câmera ========
+      camera.position.set(10, 8, 15);
+      camera.lookAt(0, 3, 0);
+
+      // ==========================================================
+      // 🔹 5. Cria o chão (fixo, massa = 0)
+      // ==========================================================
+      const groundGeo = new THREE.BoxGeometry(10, 1, 10);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+      const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+      groundMesh.position.set(0, -0.5, 0);
+      scene.add(groundMesh);
+      const groundShape = physic.createShape(5, 0.5, 5);
+      physic.createRigidBody(groundMesh, groundShape, 0);
+
+      // 🔹 6. Cria o cubo (dinâmico, massa > 0)
+      // ==========================================================
+      // ======== Criar pilha de cubos ========
+      const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
+      const cubeMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+      /*  
+      const cubeMesh = new THREE.Mesh(cubeGeo, cubeMat);
+      cubeMesh.position.set(0, 5, 0); // começa acima do chão
+      scene.add(cubeMesh);
+      const cubeShape = physic.createShape(0.5, 0.5, 0.5);
+      physic.createRigidBody(cubeMesh, cubeShape, 1);
+*/
+
+      function creaye_cube(height, grid, x, y, z) {
+        if (y == height) {
+          const mesh = new THREE.Mesh(cubeGeo, cubeMat);
+          mesh.position.set(x - grid / 2, y * 1.1 + 0.5, z - grid / 2);
+          scene.add(mesh);
+
+          const shape = physic.createShape(0.5, 0.5, 0.5);
+          physic.createRigidBody(mesh, shape, 1); // massa 1 = dinâmico
+          return;
+        } else {
+          const cubeMat2 = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+          const mesh = new THREE.Mesh(cubeGeo, cubeMat2);
+          cubeMat.color = 0x00ffff;
+          mesh.position.set(x - grid / 2, y * 1.1 + 0.5, z - grid / 2);
+          scene.add(mesh);
+
+          const shape = physic.createShape(0.5, 0.5, 0.5);
+          physic.createRigidBody(mesh, shape, 1); // massa 1 = dinâmico
+        }
+      }
+      const grid = 5; // largura da base (5x5)
+      const height = 6; // quantos andares
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < grid; x++) {
+          for (let z = 0; z < grid; z++) {
+            /*     const mesh = new THREE.Mesh(cubeGeo, cubeMat);
+            mesh.position.set(x - grid / 2, y * 1.1 + 0.5, z - grid / 2);
+            scene.add(mesh);
+
+            const shape = physic.createShape(0.5, 0.5, 0.5);
+            physic.createRigidBody(mesh, shape, 1); // massa 1 = dinâmico
+            */
+            creaye_cube(height, grid, x, y, z);
+          }
+        }
+      }
+      const clock = new THREE.Clock(); // mede
+      function animate() {
+        // Tempo entre frames (deltaTime)
+        const delta = clock.getDelta();
+        physic.update(delta);
+
+        // Renderiza a cena na tela
+        renderer.render(scene, camera);
+
+        // Chama novamente no próximo frame
+        requestAnimationFrame(animate);
+      }
+
+      animate(); // inicia o loop
+    </script>
+  </body>
+</html>

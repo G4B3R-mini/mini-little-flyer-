@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ammo.js + Three.js - Pilha de cubos</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.module.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      // ======== Carregar Ammo.js (WASM) ========
+      const AmmoLib = await new Promise(resolve => {
+        const script = document.createElement("script");
+        script.src =
+          "./js/modules/r153/examples/jsm/libs/ammo.wasm.js";
+        script.onload = () => Ammo().then(resolve);
+        document.body.appendChild(script);
+      });
+
+      // ======== Setup Three.js ========
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(10, 15, 10);
+      scene.add(light);
+
+      // ======== Setup Ammo.js (mundo físico) ========
+      const collisionConfig = new AmmoLib.btDefaultCollisionConfiguration();
+      const dispatcher = new AmmoLib.btCollisionDispatcher(collisionConfig);
+      const broadphase = new AmmoLib.btDbvtBroadphase();
+      const solver = new AmmoLib.btSequentialImpulseConstraintSolver();
+      const physicsWorld = new AmmoLib.btDiscreteDynamicsWorld(
+        dispatcher,
+        broadphase,
+        solver,
+        collisionConfig
+      );
+      physicsWorld.setGravity(new AmmoLib.btVector3(0, -9.81, 0));
+
+      const rigidBodies = [];
+      const tmpTrans = new AmmoLib.btTransform();
+
+      // Função para criar corpos físicos
+      function createRigidBody(mesh, shape, mass = 0) {
+        const transform = new AmmoLib.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(
+          new AmmoLib.btVector3(
+            mesh.position.x,
+            mesh.position.y,
+            mesh.position.z
+          )
+        );
+
+        const motionState = new AmmoLib.btDefaultMotionState(transform);
+        const localInertia = new AmmoLib.btVector3(0, 0, 0);
+
+        // Se tiver massa, calcula inércia (para corpos dinâmicos)
+        if (mass > 0) shape.calculateLocalInertia(mass, localInertia);
+
+        const rbInfo = new AmmoLib.btRigidBodyConstructionInfo(
+          mass,
+          motionState,
+          shape,
+          localInertia
+        );
+        const body = new AmmoLib.btRigidBody(rbInfo);
+
+        physicsWorld.addRigidBody(body);
+
+        if (mass > 0) rigidBodies.push({ mesh, body });
+        return body;
+      }
+
+      // ======== Chão (estático) ========
+      const groundGeo = new THREE.BoxGeometry(30, 1, 30);
+      const groundMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+      const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+      groundMesh.position.set(0, -0.5, 0);
+      scene.add(groundMesh);
+
+      const groundShape = new AmmoLib.btBoxShape(
+        new AmmoLib.btVector3(15, 0.5, 15)
+      );
+      createRigidBody(groundMesh, groundShape, 0); // massa 0 = estático
+
+      // ======== Criar pilha de cubos ========
+      const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
+      const cubeMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+
+      const grid = 5; // largura da base (5x5)
+      const height = 6; // quantos andares
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < grid; x++) {
+          for (let z = 0; z < grid; z++) {
+            const mesh = new THREE.Mesh(cubeGeo, cubeMat);
+            mesh.position.set(x - grid / 2, y * 1.1 + 0.5, z - grid / 2);
+            scene.add(mesh);
+
+            const shape = new AmmoLib.btBoxShape(
+              new AmmoLib.btVector3(0.5, 0.5, 0.5)
+            );
+            createRigidBody(mesh, shape, 1); // massa 1 = dinâmico
+          }
+        }
+      }
+
+      // ======== Câmera ========
+      camera.position.set(10, 8, 15);
+      camera.lookAt(0, 3, 0);
+
+      // ======== Loop principal ========
+      const clock = new THREE.Clock();
+      function animate() {
+        const delta = clock.getDelta();
+        physicsWorld.stepSimulation(delta, 10);
+
+        // Atualiza posição dos meshes
+        for (const { mesh, body } of rigidBodies) {
+          const motionState = body.getMotionState();
+          if (motionState) {
+            motionState.getWorldTransform(tmpTrans);
+            const origin = tmpTrans.getOrigin();
+            const rot = tmpTrans.getRotation();
+            mesh.position.set(origin.x(), origin.y(), origin.z());
+            mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
+          }
+        }
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+      animate();
+    </script>
+  </body>
+</html>
