@@ -13,6 +13,7 @@ export default class Physic extends Base {
   }
   static async create() {
     const instance = new Physic();
+    console.log(instance)
     await instance.#init();
     if (!instance.AmmoLib) throw new Error("Ammo.js not loaded yet");
     return instance;
