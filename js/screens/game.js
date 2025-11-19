@@ -1,14 +1,16 @@
 // Importa a classe base
 import { ScreenThreejs } from "./screen_fron_trheejs.js";
-import * as THREE from "three";
 import Move from "modules/move.mobile.js";
 import { JoyStick } from "modules/Joy.esm.js";
+
+
 export class Game extends ScreenThreejs {
   constructor(father, track, tag = "div", styleDisplay = "block") {
     super("game", father, tag, styleDisplay);
 
     // Propriedades da classe
     this.move = new Move(0.1);
+    this.flying = false
    // console.log(this.move);
     this.track = track;
     this.animCallback = null;
@@ -27,11 +29,15 @@ export class Game extends ScreenThreejs {
     this.__createAirplane();
   }
   __startAnimation() {
+    let cont = {frames: 0,dist: 0 }
     const animate = () => {
-      this.time += 0.016;
+
+      //this.time += 0.016;
 
       // Animar avião (movimento suave de voo)
       if (this.airplane) {
+        if (!this.flying) cont.frames +=1
+        this.#flyingStateUpdate()
         this.move.updateZ(this.airplane);
       }
 
@@ -39,6 +45,13 @@ export class Game extends ScreenThreejs {
     };
     super.__startAnimation(animate);
   }
+#flyingStateUpdate(update=()=>{}){
+if (this.flying) return
+
+}
+
+
+
   __createEnvironment() {
     this.track.scene.position.z -= 10;
     this.scene.add(this.track.scene);
@@ -68,5 +81,10 @@ export class Game extends ScreenThreejs {
   destroy() {
     this.getJoy().element.style.display = "none";
     super.destroy();
+  }
+  setPhysic(physic){
+    this.physic = physic
+    console.log(physic)
+    return this
   }
 }
