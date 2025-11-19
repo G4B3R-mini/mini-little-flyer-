@@ -32,7 +32,7 @@ export default class Setup {
       this.manager = new ScreenManager()
         .addScreen(new Loading(mainScreen))
         .addScreen(new Lobby(mainScreen, this.airport.track.clone()))
-        .addScreen(new Game(mainScreen, this.airport.track.clone()));
+        .addScreen(new Game(mainScreen, this.airport.track.clone()).setPhysic(this.system.libs.physic));
       this.manager.nextScreen("Loading", {});
 
     } catch (error) {
