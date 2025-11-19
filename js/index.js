@@ -4,12 +4,13 @@ import { fakeEquipad } from "./models.js";
 import Phisic from "./core/physical-core.js";
 
 const libs = {
-  phisic: 
-  Phisic.create()
+  physic: 
+  await Phisic.create()
 };
 
 const system = {
-  conteiner: "screens"
+  conteiner: "screens",
+  libs: libs
 };
 console.log("init");
 let cls_cache = null;
