@@ -1,35 +1,69 @@
 import { Base } from "../core/base.js";
 
+/**
+ * Gerenciador do mundo físico baseado em Ammo.js.
+ * Responsável por carregar a biblioteca, criar o mundo,
+ * definir gravidade, atualizar corpos rígidos e lidar
+ * com ghosts (objetos de detecção de colisão sem física).
+ */
 export default class Physic extends Base {
+
   constructor() {
     super("Physic");
+
+    /** @type {any} Instância carregada da Ammo.js */
     this.AmmoLib = null;
-    /**
-     * 10 = máx. subpassos (maior precisão)
-     */
+
+    /** @type {any} Mundo físico principal do Ammo.js */
     this.physicsWorld = null;
+
+    /** @type {Array<{mesh: any, body: any}>} Lista de corpos dinâmicos */
     this.rigidBodies = [];
+
+    /** @type {any} Transform temporário usado para leitura de posições */
     this.tmpTrans = null;
   }
+
+  /**
+   * Cria e inicializa o módulo de física.
+   * @returns {Promise<Physic>}
+   */
   static async create() {
     const instance = new Physic();
-    console.log(instance)
+    console.log(instance);
     await instance.#init();
-    if (!instance.AmmoLib) throw new Error("Ammo.js not loaded yet");
+    if (!instance.AmmoLib) throw new Error("Ammo.js não carregado");
     return instance;
   }
+
+  /**
+   * Processo de inicialização interno:
+   * - Carrega Ammo.js
+   * - Cria o mundo físico
+   * - Define a gravidade
+   * @private
+   */
   async #init() {
     await this.__addAmmoLib();
     this.__addWorld();
     this.__addGravity();
   }
+
+  /**
+   * Carrega a biblioteca Ammo.js dinamicamente.
+   * Retorna imediatamente se já carregada.
+   * @returns {Promise<any>}
+   * @private
+   */
   async __addAmmoLib() {
-    if (this.AmmoLib) return this.AmmoLib; // só ignora se já carregou
+    if (this.AmmoLib) return this.AmmoLib;
+
     this.log("__addAmmoLib");
 
     this.AmmoLib = await new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = "../js/modules/r153/examples/jsm/libs/ammo.wasm.js";
+
       script.onload = () => {
         if (typeof Ammo === "undefined") {
           reject(new Error("Ammo não definido após carregar o script"));
@@ -37,24 +71,28 @@ export default class Physic extends Base {
         }
         Ammo().then(resolve).catch(reject);
       };
+
       script.onerror = () =>
         reject(new Error("Falha ao carregar ammo.wasm.js"));
+
       document.body.appendChild(script);
     });
 
     return this.AmmoLib;
   }
+
+  /**
+   * Inicializa o mundo físico (broadphase, dispatcher, solver, etc.)
+   * @private
+   */
   __addWorld() {
     this.log("__addWorld");
-    // ==========================================================
-    // 🔹 3. Cria o mundo físico do Ammo.js
-    // ==========================================================
-    const collisionConfig = new this.AmmoLib.btDefaultCollisionConfiguration(); // define como colisões são tratadas
-    const dispatcher = new this.AmmoLib.btCollisionDispatcher(collisionConfig); // gerencia eventos de colisão
-    const broadphase = new this.AmmoLib.btDbvtBroadphase(); // otimiza detecção de colisões
-    const solver = new this.AmmoLib.btSequentialImpulseConstraintSolver(); // resolve as forças e colisões
 
-    // O mundo físico: une tudo acima
+    const collisionConfig = new this.AmmoLib.btDefaultCollisionConfiguration();
+    const dispatcher = new this.AmmoLib.btCollisionDispatcher(collisionConfig);
+    const broadphase = new this.AmmoLib.btDbvtBroadphase();
+    const solver = new this.AmmoLib.btSequentialImpulseConstraintSolver();
+
     this.physicsWorld = new this.AmmoLib.btDiscreteDynamicsWorld(
       dispatcher,
       broadphase,
@@ -62,22 +100,30 @@ export default class Physic extends Base {
       collisionConfig
     );
   }
+
+  /**
+   * Define a gravidade do mundo físico.
+   * @param {number} y Valor da gravidade no eixo Y.
+   * @private
+   */
   __addGravity(y = -9.81) {
     this.log("__addGravity");
-    // Define a gravidade (em m/s² no eixo Y negativo)
+
     this.physicsWorld.setGravity(new this.AmmoLib.btVector3(0, y, 0));
-    // Lista de corpos móveis (para atualizar posições)
-    //this.rigidBodies = [];
-    this.tmpTrans = new this.AmmoLib.btTransform(); // usado pra ler posições físicas
+    this.tmpTrans = new this.AmmoLib.btTransform();
   }
+
   /**
-   * massa 0 = imóvel
-   * massa 1 = cai com gravidade
+   * Cria um corpo rígido físico para um mesh.
+   * @param {any} mesh Objeto Three.js com posição e rotação
+   * @param {any} shape Forma de colisão (btShape)
+   * @param {number} mass Massa (0 = imóvel, >0 = dinâmico)
+   * @returns {any} Corpo físico Ammo.js
    */
   createRigidBody(mesh, shape, mass = 0) {
     if (!this.AmmoLib || !this.physicsWorld)
       throw new Error("Ammo.js ou mundo físico não inicializado");
-    // Transformação inicial (posição e rotação)
+
     const transform = new this.AmmoLib.btTransform();
     transform.setIdentity();
     transform.setOrigin(
@@ -88,14 +134,11 @@ export default class Physic extends Base {
       )
     );
 
-    // Motion state conecta o mundo físico com o gráfico (Three.js)
     const motionState = new this.AmmoLib.btDefaultMotionState(transform);
 
-    // Inércia local (necessária para objetos com massa)
     const localInertia = new this.AmmoLib.btVector3(0, 0, 0);
     if (mass > 0) shape.calculateLocalInertia(mass, localInertia);
 
-    // Junta tudo: massa, forma, inércia, movimento
     const rbInfo = new this.AmmoLib.btRigidBodyConstructionInfo(
       mass,
       motionState,
@@ -103,46 +146,52 @@ export default class Physic extends Base {
       localInertia
     );
 
-    // Cria o corpo físico
     const body = new this.AmmoLib.btRigidBody(rbInfo);
-
-    // Adiciona ao mundo físico
     this.physicsWorld.addRigidBody(body);
 
-    // Se tiver massa, guardamos para atualizar depois
     if (mass > 0) this.rigidBodies.push({ mesh, body });
 
     return body;
   }
+
   /**
-   * O shape físico tem metade das dimensões do mesh
+   * Cria uma forma de colisão box (metade das dimensões informadas).
+   * @param {number} x
+   * @param {number} y
+   * @param {number} z
+   * @returns {any} btBoxShape
    */
   createShape(x = 5, y = 0.5, z = 5) {
     return new this.AmmoLib.btBoxShape(new this.AmmoLib.btVector3(x, y, z));
   }
+
+  /**
+   * Atualiza o mundo físico e sincroniza as posições dos meshes.
+   * @param {number} delta Tempo entre frames
+   */
   update(delta) {
-    // Tempo entre frames (deltaTime)
-    //  const delta = clock.getDelta();
-
-    // Avança a simulação física
-    // 10 = máx. subpassos (maior precisão)
     this.physicsWorld.stepSimulation(delta, 10);
-
-    // Atualiza posição e rotação dos objetos dinâmicos
 
     for (const { mesh, body } of this.rigidBodies) {
       const motionState = body.getMotionState();
       if (motionState) {
-        motionState.getWorldTransform(this.tmpTrans); // pega transformação física
+        motionState.getWorldTransform(this.tmpTrans);
         const origin = this.tmpTrans.getOrigin();
         const rot = this.tmpTrans.getRotation();
 
-        // Aplica ao objeto Three.js
         mesh.position.set(origin.x(), origin.y(), origin.z());
         mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
       }
     }
   }
+
+  /**
+   * Cria um “ghost object" usado para detectar colisões,
+   * mas sem interação física (sem empurrar ou sofrer força).
+   * @param {any} mesh Mesh associado
+   * @param {any} shape Forma do ghost
+   * @returns {any} btPairCachingGhostObject
+   */
   createGhost(mesh, shape) {
     const transform = new this.AmmoLib.btTransform();
     transform.setIdentity();
@@ -158,21 +207,25 @@ export default class Physic extends Base {
     ghost.setWorldTransform(transform);
     ghost.setCollisionShape(shape);
     ghost.setCollisionFlags(
-      // <- evita resposta física
       ghost.getCollisionFlags() | this.AmmoLib.CF_NO_CONTACT_RESPONSE
     );
 
-    this.physicsWorld.addCollisionObject(
-      ghost,
-      1, // collision group
-      -1 // collide with all
-    );
+    this.physicsWorld.addCollisionObject(ghost, 1, -1);
 
     return ghost;
   }
+
+  /**
+   * Verifica colisões gerais — ainda não implementado.
+   */
   checkCollisions() {
-    //&&&
+    // TODO
   }
+
+  /**
+   * Retorna todos os objetos que estão sobrepostos ao ghost.
+   * @param {any} ghost Ghost criado via createGhost()
+   */
   checkGhostCollisions(ghost) {
     const num = ghost.getNumOverlappingObjects();
     for (let i = 0; i < num; i++) {
