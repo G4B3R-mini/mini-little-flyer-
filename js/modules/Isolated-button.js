@@ -5,7 +5,7 @@ export class IsolatedButton {
         this.touchId = null;
         this.onPress = onPress;
         this.onRelease = onRelease;
-
+                                                         
         // Estilos para efeitos visuais
         this.button.style.transition = "all 0.1s ease";
         this.button.style.cursor = "pointer";
