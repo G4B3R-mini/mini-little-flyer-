@@ -12,6 +12,10 @@ export class Screen {
     this.addStyle();
   }
 
+  static getName(){
+    return this.name
+  }
+
   addStyle() {
     this.screen.style.transition = `opacity ${this.transitionDuration}ms ease-in-out`;
     this.screen.style.opacity = "0"; // Inicia invisível
