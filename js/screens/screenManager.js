@@ -4,10 +4,13 @@ export class ScreenManager {
     this.screens = {};
   }
   addScreen(screen) {
+    console.log(screen.name)
     this.screens[screen.name] = screen;
     return this;
   }
-  nextScreen(name, settings, getScreen = screen => {}) {
+  nextScreen(cls_screen, settings, getScreen = screen => {}) {
+    const name = cls_screen.getName()
+    console.log(name)
     if (!this.existis(name)) return this;
     if (this.screen) this.screen.destroy();
     this.screen = this.screens[name].create(settings);
@@ -21,7 +24,8 @@ export class ScreenManager {
     }
     return true;
   }
-  getScreen(name) {
+  getScreen(cls_screen) {
+        const name = cls_screen.getName()
     if (!this.existis(name)) return;
     return this.screens[name];
   }
