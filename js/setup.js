@@ -1,19 +1,17 @@
 import { Loading, Lobby, Game, ScreenManager } from "./screens/main.js";
 import { Track } from "./airport/Track.js";
+import { delay } from "./utils/Delay.js";
 
 export default class Setup {
   constructor(
+    setupCache,
     system,
-    cacheLoadingCallback = () => {},
-    cacheLoadedCallback = (lobby, game) => {}
   ) {
+    this.setupCache = setupCache
     this.system = system;
     this.airport = { track: new Track({ runwayLength: 40 }) };
     this.initializeScreens();
 
-    this.cacheLoadedCallback = cacheLoadedCallback;
-    this.cacheLoadingCallback = cacheLoadingCallback;
-    this.minLoadingTime = 2000;
     this.isLoaded = false;
 
     setTimeout(() => {
@@ -33,7 +31,7 @@ export default class Setup {
         .addScreen(new Loading(mainScreen))
         .addScreen(new Lobby(mainScreen, this.airport.track.clone()))
         .addScreen(new Game(mainScreen, this.airport.track.clone()).setPhysic(this.system.libs.physic));
-      this.manager.nextScreen("Loading", {});
+      this.manager.nextScreen(Loading, {});
 
     } catch (error) {
       console.error("Erro ao inicializar telas:", error);
@@ -42,31 +40,12 @@ export default class Setup {
   }
 
   async loadCache() {
-    try {
-      // dá um frame pro browser renderizar o loader antes de bloquear
-    //  await new Promise(requestAnimationFrame);
-
-      // Executa o callback de carregamento
-      const startTime = performance.now();
-      await this.executeCacheLoading();
-      const loadTime = performance.now() - startTime;
-
-      // Garante tempo mínimo de exibição do loading
-      const remainingTime = Math.max(0, this.minLoadingTime - loadTime);
-
-      await this.delay(remainingTime);
-      await this.transitionToLobby();
-      //  if (callback) this.callback();
-      if (this.cacheLoadedCallback)
-        this.cacheLoadedCallback(
+    this.setupCache.loadCache()
+    if (this.setupCache.cacheLoadedCallback)
+        this.setupCache.cacheLoadedCallback(
           this.manager.screens.Lobby,
           this.manager.screens.Game
         );
-      this.isLoaded = true;
-    } catch (error) {
-      console.error("Erro durante o carregamento:", error);
-      this.handleLoadError(error);
-    }
   }
 
   async executeCacheLoading() {
@@ -84,15 +63,15 @@ export default class Setup {
 
   async transitionToLobby() {
     // Cria o lobby antes de destruir o loading para transição suave
-    this.manager.nextScreen("Lobby", {}).screenButtonClickEvent(() => {
+    this.manager.nextScreen(Lobby, {}).screenButtonClickEvent(() => {
       console.log("starting game");
-      this.manager.nextScreen("Loading", { delay: 300 });
+      this.manager.nextScreen(Loading, { delay: 300 });
       this.transitionToGame();
     });
     // this.manager.screens.Lobby.create();
 
     // Pequeno delay para garantir que o lobby seja renderizado
-    await this.delay(100);
+    await delay(100);
 
     // // Remove o loading
     // this.manager.nextScreen("Loading")
@@ -101,10 +80,10 @@ export default class Setup {
 
   async transitionToGame() {
     // Cria o lobby antes de destruir o loading para transição suave
-    this.manager.nextScreen("Game",{});
+    this.manager.nextScreen(Game,{});
 
     // Pequeno delay para garantir que o lobby seja renderizado
-    await this.delay(100);
+    await delay(100);
 
     // Remove o loading
     // this.manager.screens.Lobby.destroy();
@@ -120,9 +99,6 @@ export default class Setup {
 
     // Opcional: criar uma tela de erro personalizada
     // this.showErrorScreen(error);
-  }
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // Método para recarregar manualmente
