@@ -1,0 +1,255 @@
+
+import Ammo from "./ammo/ammo-es"
+
+
+
+
+
+export function waitForAmmoLoad() {
+  return new Promise((resolve) => {
+    Ammo().then((re) => {
+      console.log("createAmmo instanciado:", re);
+      resolve(re);
+    });
+  });
+}
+
+
+
+/**
+ * Gerenciador do mundo físico baseado em Ammo.js.
+ * Responsável por carregar a biblioteca, criar o mundo,
+ * definir gravidade, atualizar corpos rígidos e lidar
+ * com ghosts (objetos de detecção de colisão sem física).
+ */
+export default class Physic  {
+
+ async create() {
+
+
+    /** @type {any} Instância carregada da Ammo.js */
+    this.AmmoLib = null;
+
+    /** @type {any} Mundo físico principal do Ammo.js */
+    this.physicsWorld = null;
+
+    /** @type {Array<{mesh: any, body: any}>} Lista de corpos dinâmicos */
+    this.rigidBodies = [];
+
+    this.ghosts = [];
+
+    /** @type {any} Transform temporário usado para leitura de posições */
+    this.tmpTrans = null;
+
+  this.AmmoLib = await this.asyncAmmoLoad();
+  
+this.#init();
+  if (!this.AmmoLib) throw new Error("Ammo.js não carregado");
+  return this;
+  }
+
+  log(message) {
+    console.log(`[Physic] ${message}`);
+  }
+async asyncAmmoLoad(){
+return await Ammo();
+}
+
+  /**
+   * Processo de inicialização interno:
+   * - Carrega Ammo.js
+   * - Cria o mundo físico
+   * - Define a gravidade
+   * @private
+   */
+  async #init() {
+    this.__addWorld();
+    this.__addGravity();
+  }
+
+
+
+  /**
+   * Inicializa o mundo físico (broadphase, dispatcher, solver, etc.)
+   * @private
+   */
+  __addWorld() {
+    this.log("__addWorld");
+
+    const collisionConfig = new this.AmmoLib.btDefaultCollisionConfiguration();
+    const dispatcher = new this.AmmoLib.btCollisionDispatcher(collisionConfig);
+    const broadphase = new this.AmmoLib.btDbvtBroadphase();
+    const solver = new this.AmmoLib.btSequentialImpulseConstraintSolver();
+
+    this.physicsWorld = new this.AmmoLib.btDiscreteDynamicsWorld(
+      dispatcher,
+      broadphase,
+      solver,
+      collisionConfig
+    );
+  }
+
+  /**
+   * Define a gravidade do mundo físico.
+   * @param {number} y Valor da gravidade no eixo Y.
+   * @private
+   */
+  __addGravity(y = -9.81) {
+    this.log("__addGravity");
+
+    this.physicsWorld.setGravity(new this.AmmoLib.btVector3(0, y, 0));
+    this.tmpTrans = new this.AmmoLib.btTransform();
+    this.ghostRegister();
+  }
+
+  /**
+   * Cria um corpo rígido físico para um mesh.
+   * @param {any} mesh Objeto Three.js com posição e rotação
+   * @param {any} shape Forma de colisão (btShape)
+   * @param {number} mass Massa (0 = imóvel, >0 = dinâmico)
+   * @returns {any} Corpo físico Ammo.js
+   */
+  createRigidBody(mesh, shape, mass = 0) {
+    if (!this.AmmoLib || !this.physicsWorld)
+      throw new Error("Ammo.js ou mundo físico não inicializado");
+
+    const transform = new this.AmmoLib.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(
+      new this.AmmoLib.btVector3(
+        mesh.position.x,
+        mesh.position.y,
+        mesh.position.z
+      )
+    );
+
+    const motionState = new this.AmmoLib.btDefaultMotionState(transform);
+
+    const localInertia = new this.AmmoLib.btVector3(0, 0, 0);
+    if (mass > 0) shape.calculateLocalInertia(mass, localInertia);
+
+    const rbInfo = new this.AmmoLib.btRigidBodyConstructionInfo(
+      mass,
+      motionState,
+      shape,
+      localInertia
+    );
+
+    const body = new this.AmmoLib.btRigidBody(rbInfo);
+    this.physicsWorld.addRigidBody(body);
+
+    if (mass > 0) this.rigidBodies.push({ mesh, body });
+
+    return body;
+  }
+
+  /**
+   * Cria uma forma de colisão box (metade das dimensões informadas).
+   * @param {number} x
+   * @param {number} y
+   * @param {number} z
+   * @returns {any} btBoxShape
+   */
+  createShape(x = 5, y = 0.5, z = 5) {
+    return new this.AmmoLib.btBoxShape(new this.AmmoLib.btVector3(x, y, z));
+  }
+
+  /**
+   * Atualiza o mundo físico e sincroniza as posições dos meshes.
+   * @param {number} delta Tempo entre frames
+   */
+  update(delta) {
+    this.physicsWorld.stepSimulation(delta, 10);
+
+    for (const { mesh, body } of this.rigidBodies) {
+      const motionState = body.getMotionState();
+      if (motionState) {
+        motionState.getWorldTransform(this.tmpTrans);
+        const origin = this.tmpTrans.getOrigin();
+        const rot = this.tmpTrans.getRotation();
+
+        mesh.position.set(origin.x(), origin.y(), origin.z());
+        mesh.quaternion.set(rot.x(), rot.y(), rot.z(), rot.w());
+      }
+    }
+  }
+
+  /**
+   * Cria um “ghost object" usado para detectar colisões,
+   * mas sem interação física (sem empurrar ou sofrer força).
+   * @param {any} mesh Mesh associado
+   * @param {any} shape Forma do ghost
+   * @returns {any} btPairCachingGhostObject
+   */
+  createGhost(mesh, shape) {
+    const transform = new this.AmmoLib.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(
+      new this.AmmoLib.btVector3(
+        mesh.position.x,
+        mesh.position.y,
+        mesh.position.z
+      )
+    );
+
+    const ghost = new this.AmmoLib.btPairCachingGhostObject();
+    ghost.setWorldTransform(transform);
+    ghost.setCollisionShape(shape);
+    ghost.setCollisionFlags(
+      ghost.getCollisionFlags() | this.AmmoLib.CF_NO_CONTACT_RESPONSE
+    );
+
+    const SENSOR = 2; // qualquer bit livre     1, -1
+    const ALL =  0 // não colide fisicamente com nada //-1; // todos os bits
+    const DYNAMIC = 1;
+    this.physicsWorld.addCollisionObject(ghost, 4, ALL )//| DYNAMIC);
+
+    //return ghost;
+    this.ghosts.push({ mesh, ghost });
+    return ghost;
+  }
+
+  /**
+   * Verifica colisões gerais — ainda não implementado.
+   */
+  checkCollisions() {
+    // TODO
+  }
+
+  /**
+   * Retorna todos os objetos que estão sobrepostos ao ghost.
+   * @param {any} ghost Ghost criado via createGhost()
+   */
+  checkGhostCollisions(ghost) {
+    this.updateGhostTransform(ghost, ghost.mesh);
+    const num = ghost.getNumOverlappingObjects();
+    for (let i = 0; i < num; i++) {
+      const obj = ghost.getOverlappingObject(i);
+      console.log("Colidiu com", obj);
+    }
+    
+  }
+
+  ghostRegister(){
+    const ghostPairCallback = new this.AmmoLib.btGhostPairCallback();
+this.physicsWorld
+  .getBroadphase()
+  .getOverlappingPairCache()
+  .setInternalGhostPairCallback(ghostPairCallback);
+
+  }
+
+updateGhostTransform(ghost, mesh) {
+  const transform = ghost.getWorldTransform();
+  transform.setOrigin(
+    new this.AmmoLib.btVector3(
+      mesh.position.x,
+      mesh.position.y,
+      mesh.position.z
+    )
+  );
+  ghost.setWorldTransform(transform);
+}
+
+
+}

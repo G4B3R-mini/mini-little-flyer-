@@ -7,7 +7,8 @@ export default class CacheLoader {
     
   }
   addModels() {
-    models.forEach(model => {
+    for (const model of models) {
+
       if (model.name == fakeEquipad) {
         console.log(loaders[model.type]);
         new loaders[model.type].cls(model[fakeEquipad], (glft)=>{
@@ -16,6 +17,6 @@ export default class CacheLoader {
          this.cache[fakeEquipad] = glft
         });
       }
-    });
+    };
   }
 }

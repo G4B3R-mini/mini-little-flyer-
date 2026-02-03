@@ -39,7 +39,10 @@ export class ResourceCleanerChild {
 
       if (object.material) {
         if (Array.isArray(object.material)) {
-          object.material.forEach((material) => material.dispose());
+         
+          for (const material of object.material) {
+            material.dispose();
+          }
         } else {
           object.material.dispose();
         }
@@ -57,9 +60,9 @@ export class RemoveAllChild {
     traverser.traverseScene(scene, (obj) => {
       if (obj !== scene) toRemove.push(obj);
     });
-    toRemove.forEach((obj) => {
-      remove(obj);
-    });
+    for (const obj of toRemove){
+      remove(obj);  
+    }
   }
 }
 

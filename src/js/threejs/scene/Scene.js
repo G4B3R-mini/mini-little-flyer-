@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IThreejs } from "../implementation/IThreejs.js";
+import { IThreejs } from "../contract/IThreejs.js";
 import { SceneOrchestrator } from "./SceneOrchestrator.js";
 
 /**

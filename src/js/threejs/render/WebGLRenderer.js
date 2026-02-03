@@ -3,8 +3,9 @@ import * as THREE from "three";
 import { WebGLRendererElement } from "./WebGLRendererElement.js";
 import { WebGLRendererCleaner } from "./WebGLRendererCleaner.js";
 
+
 export class WebGLRenderer {
-  constructor(antalias = true, alpha = false) {
+  constructor(antalias = false, alpha = false) {
     this.renderer = new THREE.WebGLRenderer({
       antialias: antalias,
       alpha: alpha,
@@ -14,7 +15,10 @@ export class WebGLRenderer {
     this.rendererElement = new WebGLRendererElement();
     this.controler =new  WebGLRendererControler()
   }
-
+/**
+ * 
+ * @param {string} fatherId 
+ */
 
   appendTo( fatherId) {
     this.rendererElement.appendTo(this.renderer, fatherId)
@@ -22,10 +26,14 @@ export class WebGLRenderer {
     dispose() {
     this.cleaner.dispose(this.renderer);
   }
+  /**
+   * 
+   * @returns {THREE.WebGLRenderer}
+   */
   get() {
     return this.renderer;
   }
-
+/** */
   render( scene, camera){
     this.controler.render(this.renderer,scene, camera)
   }

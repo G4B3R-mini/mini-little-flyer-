@@ -1,4 +1,4 @@
-import { Element } from "../../ScreenThrejs/Element.js";
+import { Element } from "../../windows/ScreenThrejs/Element.js";
 import * as THREE from "three";
 
 export class WebGLRendererElement extends Element {

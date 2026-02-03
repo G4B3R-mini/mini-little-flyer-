@@ -25,7 +25,9 @@ export class SceneAppend extends ObjectTypeInterface {
 export class SceneAppendObjects extends SceneAppend {
   appendToScene(parent, object) {
     if (Array.isArray(object)) {
-      object.forEach((obj) => super.appendToScene(parent, obj));
+      for (const obj of object) {
+        super.appendToScene(parent, obj); 
+      }
     }
   }
 }

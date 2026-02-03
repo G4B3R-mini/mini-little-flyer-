@@ -1,4 +1,4 @@
-import { IPlugin } from "./ScreenThrejs/IPlugin.js";
+import { IPlugin } from "./windows/ScreenThrejs/IPlugin.js";
 import * as THREE from "three";
 
 export class CubePlugin extends IPlugin {

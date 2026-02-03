@@ -12,6 +12,8 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "ammo.js": "^0.0.10",
+    "ammojs-typed": "^1.0.6",
     "three": "^0.153.0"
   }
 }

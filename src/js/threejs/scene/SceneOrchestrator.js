@@ -47,7 +47,6 @@ export class SceneOrchestrator {
   addToScene(object) {
     if (!this.scene) return;
     const scene_append = this.appendFactory.getObjectType(object);
-    console.log("scene_append", scene_append);
     scene_append.appendToScene(this.scene, object);
   }
 

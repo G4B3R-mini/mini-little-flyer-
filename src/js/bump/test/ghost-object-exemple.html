@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR" style="background-color: black;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ammo.js - Objeto Atravessável</title>
+    <style>
+      body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: black; }
+      #info {
+        position: absolute; top: 10px; left: 10px;
+        background: rgba(0, 0, 0, 0.7); color: white;
+        padding: 15px; border-radius: 5px; z-index: 100;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      <h3>Ammo.js - Sensores</h3>
+      <div style="color: #51cf66">🟢 Sensor Verde: Detecta, mas não bloqueia.</div>
+      <div style="color: #339af0">🔵 Esferas: Atravessam o sensor.</div>
+      <p>Clique na tela para lançar esferas</p>
+    </div>
+
+    <script type="module">
+      import * as THREE from "three";
+      import ammo from "../ammo/ammo-es";
+
+      const Ammo = await ammo();
+
+      // Configuração Básica Three.js
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(10, 10, 10);
+      scene.add(light, new THREE.AmbientLight(0x404040));
+
+      // Configuração Ammo.js
+      const collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
+      const dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration);
+      const overlappingPairCache = new Ammo.btDbvtBroadphase();
+      const solver = new Ammo.btSequentialImpulseConstraintSolver();
+      const physicsWorld = new Ammo.btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+      physicsWorld.setGravity(new Ammo.btVector3(0, -9.8, 0));
+
+      const rigidBodies = [];
+      let sensorBody = null;
+
+      // --- CRIAÇÃO DO CHÃO ---
+      createBox(new THREE.Vector3(0, -1, 0), new THREE.Vector3(40, 1, 40), 0, 0x333333);
+
+      // --- CRIAÇÃO DO SENSOR (O OBJETO ATRAVESSÁVEL) ---
+      function createSensor() {
+        const pos = new THREE.Vector3(0, 3, 0);
+        const size = new THREE.Vector3(6, 4, 1);
+        
+        // Mesh Visual
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(size.x, size.y, size.z),
+          new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3 })
+        );
+        mesh.position.copy(pos);
+        scene.add(mesh);
+
+        // Física
+        const transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+        const motionState = new Ammo.btDefaultMotionState(transform);
+        const colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x/2, size.y/2, size.z/2));
+        const rbInfo = new Ammo.btRigidBodyConstructionInfo(0, motionState, colShape, new Ammo.btVector3(0, 0, 0));
+        const body = new Ammo.btRigidBody(rbInfo);
+
+        // FLAG MÁGICA: CF_NO_CONTACT_RESPONSE = 4
+        // Isso faz o objeto ser um "fantasma" que detecta colisão mas não impede movimento
+        body.setCollisionFlags(body.getCollisionFlags() | 4);
+        
+        physicsWorld.addRigidBody(body);
+        sensorBody = body; // Referência para checagem posterior
+      }
+
+      // Função genérica para criar caixas/esferas
+      function createBox(pos, size, mass, color) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshStandardMaterial({ color }));
+        mesh.position.copy(pos);
+        scene.add(mesh);
+
+        const transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+        const motionState = new Ammo.btDefaultMotionState(transform);
+        const colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x/2, size.y/2, size.z/2));
+        const localInertia = new Ammo.btVector3(0, 0, 0);
+        if (mass > 0) colShape.calculateLocalInertia(mass, localInertia);
+        const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
+        const body = new Ammo.btRigidBody(rbInfo);
+
+        physicsWorld.addRigidBody(body);
+        if (mass > 0) rigidBodies.push({ mesh, body });
+      }
+
+      function spawnSphere() {
+        const radius = 0.5;
+        const pos = { x: (Math.random()-0.5)*4, y: 10, z: 0 };
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius), new THREE.MeshStandardMaterial({ color: 0x339af0 }));
+        scene.add(mesh);
+
+        const transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+        const colShape = new Ammo.btSphereShape(radius);
+        const localInertia = new Ammo.btVector3(0, 0, 0);
+        colShape.calculateLocalInertia(1, localInertia);
+        const rbInfo = new Ammo.btRigidBodyConstructionInfo(1, new Ammo.btDefaultMotionState(transform), colShape, localInertia);
+        const body = new Ammo.btRigidBody(rbInfo);
+        
+        physicsWorld.addRigidBody(body);
+        rigidBodies.push({ mesh, body });
+      }
+
+      // --- DETECÇÃO DE ATRAVESSAMENTO ---
+      function updatePhysics(deltaTime) {
+        physicsWorld.stepSimulation(deltaTime, 10);
+
+        // Atualiza posições visuais
+        for (let i = 0; i < rigidBodies.length; i++) {
+          const obj = rigidBodies[i];
+          const ms = obj.body.getMotionState();
+          if (ms) {
+            const transform = new Ammo.btTransform();
+            ms.getWorldTransform(transform);
+            const p = transform.getOrigin();
+            const q = transform.getRotation();
+            obj.mesh.position.set(p.x(), p.y(), p.z());
+            obj.mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
+          }
+        }
+
+        // Checa se algo atravessou o sensor
+        let numManifolds = dispatcher.getNumManifolds();
+        for (let i = 0; i < numManifolds; i++) {
+          let manifold = dispatcher.getManifoldByIndexInternal(i);
+          let rb0 = Ammo.castObject(manifold.getBody0(), Ammo.btRigidBody);
+          let rb1 = Ammo.castObject(manifold.getBody1(), Ammo.btRigidBody);
+
+          if (rb0 === sensorBody || rb1 === sensorBody) {
+            if (manifold.getNumContacts() > 0) {
+              console.log("LOG: Objeto atravessando o sensor verde!");
+            }
+          }
+        }
+      }
+
+      // Loop de Animação
+      const clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        updatePhysics(clock.getDelta());
+        renderer.render(scene, camera);
+      }
+
+      camera.position.set(0, 5, 15);
+      createSensor();
+      animate();
+
+      window.addEventListener('mousedown', spawnSphere);
+    </script>
+  </body>
+
+</html>
+

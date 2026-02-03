@@ -1,4 +1,4 @@
-import { IObjectThreejs } from "./implementation/IObjectThreejs.js";
+import { IObjectThreejs } from "./contract/IObjectThreejs.js";
 import * as THREE from "three";
 
 export class DirectionalLight extends IObjectThreejs {
@@ -26,10 +26,29 @@ export class DirectionalLight extends IObjectThreejs {
   }
 }
 
-export class AmbientLight extends IObjectThreejs {
-  constructor(color, intencity) {
+export class Light extends IObjectThreejs {
+  constructor(amb) {
     super();
-    this.amb = new THREE.AmbientLight(color, intencity);
+    this.amb = amb;
+  }
+  shadow(state) {
+    this.amb.castShadow = state;
+  }
+  get() {
+    return this.amb;
+  }
+  addToScene(scene) {
+    scene.add(this.amb);
+  }
+  setPosition(x, y, z) {
+    this.amb.position.set(x, y, z);
+  }
+}
+
+export class AmbientLight extends Light {
+  constructor(color, intencity) {
+    super(new THREE.AmbientLight(color, intencity));
+    this.shadow(false);
   }
 
   get() {
@@ -40,5 +59,12 @@ export class AmbientLight extends IObjectThreejs {
   }
   setPosition(x, y, z) {
     this.amb.position.set(x, y, z);
+  }
+}
+
+export class HemisphereLight extends Light {
+  constructor() {
+    super(new THREE.HemisphereLight(0xffffff, 0x444444));
+    this.amb.position.set(0, 20, 0);
   }
 }

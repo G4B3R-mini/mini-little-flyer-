@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { ICameraThreejs } from "./implementation/ICameraThreejs.js";
+import { ICameraThreejs } from "./contract/ICameraThreejs.js";
 import { AngleX, AngleXYZ, AngleY, AngleZ } from "./angle.js";
 
 export class PerspectiveCamera extends ICameraThreejs{

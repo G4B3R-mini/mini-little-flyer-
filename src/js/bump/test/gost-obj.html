@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ghost Object Detection - Three.js + Ammo.js</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
+      #info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-family: Arial;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      <h3>Ghost Object Detection</h3>
+      <p>Pressione ESPAÇO para lançar uma esfera</p>
+      <p>Objetos detectados: <span id="count">0</span></p>
+      <div id="log"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/kripken/ammo.js@master/builds/ammo.js"></script>
+
+    <script>
+      let scene, camera, renderer;
+      let physicsWorld;
+      let rigidBodies = [];
+      let ghostObject;
+      let ghostMesh;
+      let tmpTrans;
+      let detectedObjects = new Set(); // Rastrear objetos já detectados
+      let objectsInZone = new Set(); // Objetos atualmente na zona
+
+      const STATE = { DISABLE_DEACTIVATION: 4 };
+
+      Ammo().then(start);
+
+      function start() {
+        tmpTrans = new Ammo.btTransform();
+        setupGraphics();
+        setupPhysics();
+        createGhostZone();
+        createGround();
+        animate();
+        setupControls();
+      }
+
+      function setupGraphics() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          0.2,
+          2000
+        );
+        camera.position.set(0, 10, 20);
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Luzes
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        window.addEventListener("resize", onWindowResize);
+      }
+
+      function setupPhysics() {
+        const collisionConfiguration =
+          new Ammo.btDefaultCollisionConfiguration();
+        const dispatcher = new Ammo.btCollisionDispatcher(
+          collisionConfiguration
+        );
+        const overlappingPairCache = new Ammo.btDbvtBroadphase();
+        const solver = new Ammo.btSequentialImpulseConstraintSolver();
+
+        physicsWorld = new Ammo.btDiscreteDynamicsWorld(
+          dispatcher,
+          overlappingPairCache,
+          solver,
+          collisionConfiguration
+        );
+
+        physicsWorld.setGravity(new Ammo.btVector3(0, -9.8, 0));
+      }
+
+      function createGhostZone() {
+        // Mesh visual do Ghost Object (semi-transparente)
+        const geometry = new THREE.BoxGeometry(5, 5, 5);
+        const material = new THREE.MeshPhongMaterial({
+          color: 0x00ff00,
+          transparent: true,
+          opacity: 0.3,
+          wireframe: true,
+        });
+        ghostMesh = new THREE.Mesh(geometry, material);
+        ghostMesh.position.set(0, 5, 0);
+        scene.add(ghostMesh);
+
+        // Criar Ghost Object no Ammo.js
+        const ghostShape = new Ammo.btBoxShape(
+          new Ammo.btVector3(2.5, 2.5, 2.5)
+        );
+        ghostObject = new Ammo.btPairCachingGhostObject();
+
+        const ghostTransform = new Ammo.btTransform();
+        ghostTransform.setIdentity();
+        ghostTransform.setOrigin(new Ammo.btVector3(0, 5, 0));
+
+        ghostObject.setWorldTransform(ghostTransform);
+        ghostObject.setCollisionShape(ghostShape);
+        ghostObject.setCollisionFlags(ghostObject.getCollisionFlags() | 4); // CF_NO_CONTACT_RESPONSE
+
+        physicsWorld.addCollisionObject(ghostObject, 1, -1);
+      }
+
+      function createGround() {
+        const geometry = new THREE.BoxGeometry(50, 1, 50);
+        const material = new THREE.MeshPhongMaterial({ color: 0x808080 });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+
+        const shape = new Ammo.btBoxShape(new Ammo.btVector3(25, 0.5, 25));
+        const transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(new Ammo.btVector3(0, -0.5, 0));
+
+        const mass = 0;
+        const localInertia = new Ammo.btVector3(0, 0, 0);
+        const motionState = new Ammo.btDefaultMotionState(transform);
+        const rbInfo = new Ammo.btRigidBodyConstructionInfo(
+          mass,
+          motionState,
+          shape,
+          localInertia
+        );
+        const body = new Ammo.btRigidBody(rbInfo);
+
+        physicsWorld.addRigidBody(body);
+      }
+
+      function createSphere() {
+        const radius = 0.5;
+        const geometry = new THREE.SphereGeometry(radius, 32, 32);
+        const material = new THREE.MeshPhongMaterial({
+          color: Math.random() * 0xffffff,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        const startPos = new THREE.Vector3(
+          (Math.random() - 0.5) * 10,
+          15,
+          (Math.random() - 0.5) * 10
+        );
+        mesh.position.copy(startPos);
+        scene.add(mesh);
+
+        const shape = new Ammo.btSphereShape(radius);
+        const transform = new Ammo.btTransform();
+        transform.setIdentity();
+        transform.setOrigin(
+          new Ammo.btVector3(startPos.x, startPos.y, startPos.z)
+        );
+
+        const mass = 1;
+        const localInertia = new Ammo.btVector3(0, 0, 0);
+        shape.calculateLocalInertia(mass, localInertia);
+
+        const motionState = new Ammo.btDefaultMotionState(transform);
+        const rbInfo = new Ammo.btRigidBodyConstructionInfo(
+          mass,
+          motionState,
+          shape,
+          localInertia
+        );
+        const body = new Ammo.btRigidBody(rbInfo);
+
+        body.setActivationState(STATE.DISABLE_DEACTIVATION);
+        physicsWorld.addRigidBody(body);
+
+        const objectId = rigidBodies.length;
+        rigidBodies.push({
+          mesh: mesh,
+          body: body,
+          id: objectId,
+          name: `Esfera_${objectId}`,
+        });
+      }
+
+      function updatePhysics(deltaTime) {
+        physicsWorld.stepSimulation(deltaTime, 10);
+
+        // Atualizar posições dos rigid bodies
+        for (let i = 0; i < rigidBodies.length; i++) {
+          const objThree = rigidBodies[i].mesh;
+          const objAmmo = rigidBodies[i].body;
+          const ms = objAmmo.getMotionState();
+
+          if (ms) {
+            ms.getWorldTransform(tmpTrans);
+            const p = tmpTrans.getOrigin();
+            const q = tmpTrans.getRotation();
+            objThree.position.set(p.x(), p.y(), p.z());
+            objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
+          }
+        }
+
+        checkGhostCollisions();
+      }
+
+      function checkGhostCollisions() {
+        const numOverlapping = ghostObject.getNumOverlappingObjects();
+        const currentlyInZone = new Set();
+
+        console.log(
+          `Verificando colisões: ${numOverlapping} objetos detectados`
+        );
+
+        for (let i = 0; i < numOverlapping; i++) {
+          const overlappingObj = ghostObject.getOverlappingObject(i);
+
+          // Procurar por correspondência usando ponteiro
+          for (let j = 0; j < rigidBodies.length; j++) {
+            const rb = rigidBodies[j];
+
+            // Comparar ponteiros do Ammo.js
+            if (Ammo.getPointer(rb.body) === Ammo.getPointer(overlappingObj)) {
+              currentlyInZone.add(rb.id);
+
+              // Se é a primeira vez que detecta este objeto
+              if (!objectsInZone.has(rb.id)) {
+                const pos = rb.mesh.position;
+                logDetection(
+                  `✅ ${rb.name} ENTROU na zona! Posição: (${pos.x.toFixed(
+                    2
+                  )}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`
+                );
+
+                // Efeito visual de entrada
+                ghostMesh.material.color.setHex(0x00ffff);
+                rb.mesh.material.emissive = new THREE.Color(0x00ff00);
+
+                setTimeout(() => {
+                  ghostMesh.material.color.setHex(0x00ff00);
+                  if (rb.mesh.material) {
+                    rb.mesh.material.emissive = new THREE.Color(0x000000);
+                  }
+                }, 300);
+              }
+              break;
+            }
+          }
+        }
+
+        // Detectar objetos que SAÍRAM da zona
+        objectsInZone.forEach((objId) => {
+          if (!currentlyInZone.has(objId)) {
+            const rigidBody = rigidBodies.find((rb) => rb.id === objId);
+            if (rigidBody) {
+              const pos = rigidBody.mesh.position;
+              logDetection(
+                `⬅️ ${rigidBody.name} SAIU da zona! Posição: (${pos.x.toFixed(
+                  2
+                )}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`
+              );
+
+              // Efeito visual de saída
+              ghostMesh.material.color.setHex(0xff9900);
+              setTimeout(() => {
+                ghostMesh.material.color.setHex(0x00ff00);
+              }, 300);
+
+              detectedObjects.add(objId);
+            }
+          }
+        });
+
+        // Atualizar contador
+        document.getElementById("count").textContent = detectedObjects.size;
+
+        // Atualizar conjunto de objetos na zona
+        objectsInZone = currentlyInZone;
+      }
+
+      function logDetection(message) {
+        console.log(message);
+        const logDiv = document.getElementById("log");
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML =
+          `<div>[${timestamp}] ${message}</div>` + logDiv.innerHTML;
+
+        // Limitar a 15 mensagens
+        const logs = logDiv.getElementsByTagName("div");
+        if (logs.length > 15) {
+          logDiv.removeChild(logs[logs.length - 1]);
+        }
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const deltaTime = 1 / 60;
+        updatePhysics(deltaTime);
+
+        renderer.render(scene, camera);
+      }
+
+      function setupControls() {
+        window.addEventListener("keydown", (event) => {
+          if (event.code === "Space") {
+            createSphere();
+            logDetection("🚀 Nova esfera lançada!");
+          }
+        });
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    </script>
+  </body>
+</html>

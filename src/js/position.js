@@ -4,7 +4,9 @@ constructor(){
 }
 
 notify(){
-  this.observables.forEach(observable => observable.update())
+  for (const observable of this.observables){
+    observable.update()
+  }
 }
 setState(){
   
