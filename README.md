@@ -22,3 +22,4 @@ Atualmente em:
 
 ## 💡 Objetivo
 Criar um simulador acessível e divertido, com foco em **multiplayer leve**, **ótimo desempenho** e **boa jogabilidade em dispositivos Android**.
+# scripts
